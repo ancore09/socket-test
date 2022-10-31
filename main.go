@@ -9,6 +9,8 @@ func init() {
 	// Listen on an endpoint
 	f.OnConnect(func(client *f.Client, request *f.Request) {
 		log.Println("Client connected.")
+		client.Join("room")
+		client.Broadcast("room", "hello", f.NewSuccessMessage("hui"))
 	})
 
 	f.Listen("echo", func(client *f.Client, request *f.Request) *f.Message {
