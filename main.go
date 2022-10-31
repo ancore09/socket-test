@@ -10,12 +10,12 @@ func init() {
 	f.OnConnect(func(client *f.Client, request *f.Request) {
 		log.Println("Client connected.")
 		client.Join("room")
-		client.Broadcast("room", "hello", f.NewSuccessMessage("hui"))
 	})
 
-	f.Listen("echo", func(client *f.Client, request *f.Request) *f.Message {
-		log.Println(request.Message.Text)
-		return f.NewSuccessMessage(request.Message.Text)
+	f.Listen("new-message", func(client *f.Client, request *f.Request) *f.Message {
+		log.Println("New message received.")
+		client.Broadcast("room", request.Endpoint, f.NewSuccessMessage(request.Message.Text))
+		return f.NewSuccessMessage()
 	})
 }
 
