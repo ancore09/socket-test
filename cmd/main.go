@@ -3,6 +3,8 @@ package main
 import (
 	f "github.com/ambelovsky/gosf"
 	"log"
+	"os"
+	"strconv"
 	k "test/kafka"
 )
 
@@ -17,7 +19,7 @@ func init() {
 	f.Listen("new-message", func(client *f.Client, request *f.Request) *f.Message {
 		log.Println("New message received.")
 		k.Write(request.Message.Text)
-		client.Broadcast("room", request.Endpoint, f.NewSuccessMessage(request.Message.Text))
+		//client.Broadcast("room", request.Endpoint, f.NewSuccessMessage(request.Message.Text))
 		return f.NewSuccessMessage()
 	})
 
@@ -28,6 +30,7 @@ func main() {
 		f.Broadcast("room", "new-message", f.NewSuccessMessage(s))
 	})
 
+	p, _ := strconv.Atoi(os.Args[1])
 	f.Startup(map[string]interface{}{
-		"port": 9999})
+		"port": p})
 }

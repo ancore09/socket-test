@@ -41,13 +41,16 @@ func Write(message string) {
 }
 
 func Read(callback func(string)) {
-	conn, err := kafka.DialLeader(context.Background(), "tcp", "localhost:9092", "messages", 0)
-	log.Println("read")
-	if err != nil {
-		log.Fatal("failed to dial leader:", err)
-	}
+	r := kafka.NewReader(kafka.ReaderConfig{
+		Brokers:  []string{"localhost:9092"},
+		GroupID:  "consumer-group-id",
+		Topic:    "messages",
+		MinBytes: 0,    // 10KB
+		MaxBytes: 10e6, // 10MB
+	})
+
 	for {
-		m, err := conn.ReadMessage(10e3) // 10KB max per message
+		m, err := r.ReadMessage(context.Background()) // 10KB max per message
 		if err != nil {
 			log.Println(err)
 			break
@@ -56,7 +59,7 @@ func Read(callback func(string)) {
 		callback(string(m.Value))
 	}
 
-	if err := conn.Close(); err != nil {
+	if err := r.Close(); err != nil {
 		log.Fatal("failed to close connection:", err)
 	}
 }
