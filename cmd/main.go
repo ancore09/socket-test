@@ -16,7 +16,7 @@ func init() {
 
 	f.Listen("new-message", func(client *f.Client, request *f.Request) *f.Message {
 		log.Println("New message received.")
-
+		k.Write(request.Message.Text)
 		client.Broadcast("room", request.Endpoint, f.NewSuccessMessage(request.Message.Text))
 		return f.NewSuccessMessage()
 	})
@@ -24,10 +24,10 @@ func init() {
 }
 
 func main() {
-	// Start the server using a basic configuration
+	go k.Read(func(s string) {
+		f.Broadcast("room", "new-message", f.NewSuccessMessage(s))
+	})
+
 	f.Startup(map[string]interface{}{
 		"port": 9999})
-
-	k.Write()
-	k.Read()
 }

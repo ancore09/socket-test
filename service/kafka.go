@@ -2,7 +2,6 @@ package kafka
 
 import (
 	"context"
-	"fmt"
 	"github.com/segmentio/kafka-go"
 	"log"
 	"time"
@@ -17,20 +16,23 @@ func Configure(url string, topic string, partition int) (c *kafka.Conn, err erro
 	return conn, err
 }
 
-func Write() {
+func Write(message string) {
 	conn, err := kafka.DialLeader(context.Background(), "tcp", "localhost:9092", "messages", 0)
+	log.Println("write")
+
 	if err != nil {
 		log.Fatal("failed to dial leader:", err)
 	}
 
-	conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-	_, err = conn.WriteMessages(kafka.Message{Value: []byte("test")})
+	err = conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+	if err != nil {
+		log.Fatal("failed to set deadline:", err)
+		return
+	}
+	_, err = conn.WriteMessages(kafka.Message{Value: []byte(message)})
 	if err != nil {
 		log.Fatal("failed to write messages:", err)
 		return
-	}
-	if err != nil {
-		log.Fatal("failed to write messages:", err)
 	}
 
 	if err := conn.Close(); err != nil {
@@ -38,26 +40,20 @@ func Write() {
 	}
 }
 
-func Read() {
+func Read(callback func(string)) {
 	conn, err := kafka.DialLeader(context.Background(), "tcp", "localhost:9092", "messages", 0)
+	log.Println("read")
 	if err != nil {
 		log.Fatal("failed to dial leader:", err)
 	}
-
-	batch := conn.ReadBatch(10e3, 1e6) // fetch 10KB min, 1MB max
-
-	b := make([]byte, 10e3) // 10KB max per message
 	for {
-		n, err := batch.Read(b)
+		m, err := conn.ReadMessage(10e3) // 10KB max per message
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			break
 		}
-		fmt.Println(string(b[:n]))
-	}
-
-	if err := batch.Close(); err != nil {
-		log.Fatal("failed to close batch:", err)
+		log.Println(string(m.Value))
+		callback(string(m.Value))
 	}
 
 	if err := conn.Close(); err != nil {
