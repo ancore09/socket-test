@@ -1,5 +1,7 @@
 const io = require('socket.io-client');
-const socket = io.connect('ws://localhost:9999', { transports: ['websocket'] });
+// get port from argv
+const port = process.argv[3];
+const socket = io.connect('ws://localhost:' + port, { transports: ['websocket'] });
 
 socket.on("new-message", (data) => {
     if (data.success && data.text) {
