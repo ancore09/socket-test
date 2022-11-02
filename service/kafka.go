@@ -2,10 +2,25 @@ package kafka
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/segmentio/kafka-go"
 	"log"
 	"time"
 )
+
+type Msg struct {
+	Text   string
+	Target string
+	From   string
+}
+
+func NewMsg(msg string, target string, from string) Msg {
+	return Msg{
+		Text:   msg,
+		Target: target,
+		From:   from,
+	}
+}
 
 func Configure(url string, topic string, partition int) (c *kafka.Conn, err error) {
 	conn, err := kafka.DialLeader(context.Background(), "tcp", url, topic, partition)
@@ -16,7 +31,7 @@ func Configure(url string, topic string, partition int) (c *kafka.Conn, err erro
 	return conn, err
 }
 
-func Write(message string) {
+func Write(message Msg) {
 	conn, err := kafka.DialLeader(context.Background(), "tcp", "localhost:9092", "messages", 0)
 	log.Println("write")
 
@@ -29,7 +44,8 @@ func Write(message string) {
 		log.Fatal("failed to set deadline:", err)
 		return
 	}
-	_, err = conn.WriteMessages(kafka.Message{Value: []byte(message)})
+	m, _ := json.Marshal(message)
+	_, err = conn.WriteMessages(kafka.Message{Value: m})
 	if err != nil {
 		log.Fatal("failed to write messages:", err)
 		return
@@ -40,11 +56,11 @@ func Write(message string) {
 	}
 }
 
-func Read(callback func(string)) {
+func Read(url string, topic string, callback func(Msg)) {
 	r := kafka.NewReader(kafka.ReaderConfig{
-		Brokers:  []string{"localhost:9092"},
+		Brokers:  []string{url},
 		GroupID:  "consumer-group-id",
-		Topic:    "messages",
+		Topic:    topic,
 		MinBytes: 0,    // 10KB
 		MaxBytes: 10e6, // 10MB
 	})
@@ -55,8 +71,13 @@ func Read(callback func(string)) {
 			log.Println(err)
 			break
 		}
-		log.Println(string(m.Value))
-		callback(string(m.Value))
+		msg := Msg{}
+		err = json.Unmarshal(m.Value, &msg)
+		if err != nil {
+			return
+		}
+		log.Println(msg.Text)
+		callback(msg)
 	}
 
 	if err := r.Close(); err != nil {
